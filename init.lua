@@ -1,45 +1,105 @@
+-- memakai kode di bawah ini, ikuti caranya:
+-- 1. setelah buka nvim dengan pengaturan configurasi ini, keluar. Lalu...
+-- hapus folder instalasi plugin yang setengah jadi
+-- rm -rf ~/.local/share/nvim/lazy/nvim-treesitter
+-- rm -rf ~/.local/state/nvim/lazy/
+-- lalu buka lagi nvim
+-- :TSInstall python lua 
 -- ==========================================================================
--- DISABLE UNUSED PROVIDERS (AMAN)
--- ==========================================================================
-vim.g.loaded_python3_provider = 0
-vim.g.loaded_perl_provider = 0
-vim.g.loaded_ruby_provider = 0
-
-
--- ==========================================================================
--- LAZY.NVIM BOOTSTRAP
+-- 1. PENGATURAN DASAR (WAJIB)
 -- ==========================================================================
 vim.g.mapleader = " "
-
+vim.opt.termguicolors = true -- Wajib agar warna tidak flat
+vim.opt.number = true
+vim.opt.relativenumber = true -- Angka relatif memudahkan lompat baris (misal: 10j)
+vim.opt.ignorecase = true -- Search tidak sensitif huruf besar/kecil
+vim.opt.smartcase = true -- Search sensitif huruf besar jika Anda mengetik huruf besar
+vim.opt.cursorline = true -- Garis bawah pada baris kursor aktif
+vim.opt.scrolloff = 8 -- Sisakan 8 baris saat scroll agar kursor tidak di paling bawah
+-- ==========================================================================
+-- 2. BOOTSTRAP LAZY.NVIM (Plugin Manager)
+-- ==========================================================================
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
   vim.fn.system({
     "git", "clone", "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable",
-    lazypath,
+    "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath,
   })
 end
 vim.opt.rtp:prepend(lazypath)
 
 -- ==========================================================================
--- PLUGINS
+-- 3. KONFIGURASI PLUGIN
 -- ==========================================================================
 require("lazy").setup({
-  rocks = { enabled = false, hererocks = false, },
-
-  -- ✨ Auto pairs {}, (), []
+  -- [A] TEMA WARNA (Agar Treesitter terlihat hasilnya)
   {
-    "windwp/nvim-autopairs",
-    event = "InsertEnter",
+    "folke/tokyonight.nvim",
+    lazy = false,
+    priority = 1000,
     config = function()
-      require("nvim-autopairs").setup({
-        check_ts = false,
+      vim.cmd([[colorscheme tokyonight-night]])
+    end,
+  },
+-- [LSP] Konfigurasi Kecerdasan Bahasa
+{
+  "neovim/nvim-lspconfig",
+  dependencies = {
+    "williamboman/mason.nvim",
+    "williamboman/mason-lspconfig.nvim",
+    "hrsh7th/cmp-nvim-lsp", -- Tambahkan ini untuk persiapan autocomplete nanti
+  },
+  config = function()
+    -- 1. Inisialisasi Mason
+    require("mason").setup()
+
+    -- 2. Setup Capabilities (Agar LSP tahu Neovim mendukung autocomplete)
+    local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+    -- 3. Inisialisasi Mason-Lspconfig dengan Handlers terintegrasi
+    require("mason-lspconfig").setup({
+      ensure_installed = { "pyright", "lua_ls" },
+      -- Kita masukkan handler langsung di sini, ini lebih stabil
+      handlers = {
+        function(server_name)
+          require("lspconfig")[server_name].setup({
+            capabilities = capabilities,
+          })
+        end,
+      },
+    })
+  end,
+},
+-- TREESITTER: Mesin Highlighting
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    config = function()
+      -- Proteksi: Jangan jalankan jika module belum ada
+      local ok, configs = pcall(require, "nvim-treesitter.configs")
+      if not ok then return end
+
+      configs.setup({
+        ensure_installed = { "python", "lua", "vim", "vimdoc", "query" },
+        auto_install = true,
+        highlight = {
+          enable = true,
+          additional_vim_regex_highlighting = false,
+        },
       })
     end,
   },
-
-  -- 🔍 Telescope
+  -- ✨ Auto pairs {}, (), []
+{
+  "windwp/nvim-autopairs",
+  event = "InsertEnter",
+  config = function()
+    require("nvim-autopairs").setup({
+      check_ts = true, -- Aktifkan integrasi Treesitter
+    })
+  end,
+},
+    -- 🔍 Telescope
   {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
@@ -48,8 +108,12 @@ require("lazy").setup({
       require("telescope").setup({})
     end,
   },
-
-  -- 🧠 Autocomplete (CMP)
+  {
+  "lukas-reineke/indent-blankline.nvim",
+  main = "ibl",
+  opts = {},
+},
+-- [CMP] Autocomplete Menu
   {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
@@ -57,7 +121,8 @@ require("lazy").setup({
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
-      "L3MON4D3/LuaSnip",
+      "L3MON4D3/LuaSnip", -- Snippet engine (wajib ada)
+      "saadparwaiz1/cmp_luasnip",
     },
     config = function()
       local cmp = require("cmp")
@@ -70,71 +135,54 @@ require("lazy").setup({
           end,
         },
         mapping = cmp.mapping.preset.insert({
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
-          ["<Tab>"] = cmp.mapping.select_next_item(),
-          ["<S-Tab>"] = cmp.mapping.select_prev_item(),
-          ["<C-Space>"] = cmp.mapping.complete(),
+          ["<C-Space>"] = cmp.mapping.complete(), -- Paksa munculkan saran
+          ["<CR>"] = cmp.mapping.confirm({ select = true }), -- Enter untuk pilih
+          ["<Tab>"] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then
+              luasnip.expand_or_jump()
+            else
+              fallback()
+            end
+          end, { "i", "s" }),
         }),
-        sources = {
-          { name = "nvim_lsp" },
-          { name = "buffer" },
-          { name = "path" },
-        },
+        sources = cmp.config.sources({
+          { name = "nvim_lsp" }, -- Saran dari LSP
+          { name = "luasnip" },  -- Saran dari Snippet
+        }, {
+          { name = "buffer" },   -- Saran dari kata-kata di file ini
+          { name = "path" },     -- Saran untuk path file
+        }),
       })
     end,
   },
-  -- 💡 Highlight simbol di bawah cursor
+  -- [D] Highlight simbol di bawah cursor (Smart Highlight)
   {
     "RRethy/vim-illuminate",
-    event = "BufReadPost",
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
       require("illuminate").configure({
-        providers = { "lsp", "treesitter", "regex" },
-        delay = 200,
-        filetypes_denylist = { "NvimTree", "TelescopePrompt", "lazy" },
-        min_count_to_highlight = 2,
+        -- Provider prioritas: LSP -> Treesitter -> Regex
+        providers = { "lsp", "treesitter" }, 
+        delay = 100, -- Lebih cepat (0.1 detik)
+        large_file_cutoff = 2000, -- Jangan aktif di file raksasa (>2000 baris)
+        filetypes_denylist = {
+          "NvimTree",
+          "TelescopePrompt",
+          "lazy",
+          "mason",
+        },
       })
-    end,
-  },
-
-  -- 🐍 LSP Python (Pyright)
-  {
-    "williamboman/mason.nvim",
-    dependencies = {
-      "williamboman/mason-lspconfig.nvim",
-      "hrsh7th/cmp-nvim-lsp",
-    },
-    config = function()
-      require("mason").setup()
-
-      require("mason-lspconfig").setup({
-        ensure_installed = { "pyright" },
-      })
-
-      local capabilities =
-        require("cmp_nvim_lsp").default_capabilities()
-
-      -- Neovim 0.11+
-      vim.lsp.config("pyright", {
-        capabilities = capabilities,
-      })
+      
+      -- Opsional: Ubah warna highlight agar sesuai dengan Tokyonight
+      -- Warna 'IlluminatedWordText' biasanya agak redup di beberapa tema
+      vim.api.nvim_set_hl(0, "IlluminatedWordText", { link = "Visual" })
+      vim.api.nvim_set_hl(0, "IlluminatedWordRead", { link = "Visual" })
+      vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { link = "Visual" })
     end,
   },
 })
-
--- ==========================================================================
--- LSP KEYMAPS
--- ==========================================================================
-vim.api.nvim_create_autocmd("LspAttach", {
-  callback = function(ev)
-    local opts = { buffer = ev.buf }
-    vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-    vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-    vim.keymap.set("n", "<leader>r", vim.lsp.buf.rename, opts)
-    vim.keymap.set("n", "<leader>a", vim.lsp.buf.code_action, opts)
-  end,
-})
-
 -- ==========================================================================
 -- TELESCOPE KEYMAPS
 -- ==========================================================================
@@ -154,12 +202,13 @@ vim.keymap.set("n", "<leader>fh", function()
   require("telescope.builtin").help_tags()
 end)
 
--- ==========================================================================
--- BASIC PYTHON SETTINGS
--- ==========================================================================
-vim.opt.number = true
-vim.opt.expandtab = true
-vim.opt.tabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.completeopt = { "menu", "menuone", "noselect" }
-
+-- Keymaps untuk LSP (Gunakan saat kursor berada di atas kode)
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(ev)
+    local opts = { buffer = ev.buf }
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts) -- Go to Definition
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)       -- Munculkan info dokumentasi
+    vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts) -- Rename variabel massal
+    vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts) -- Fix error otomatis
+  end,
+})
