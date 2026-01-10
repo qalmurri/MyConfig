@@ -8,6 +8,7 @@
 -- ==========================================================================
 -- 1. PENGATURAN DASAR (WAJIB)
 -- ==========================================================================
+vim.opt.signcolumn = "yes" -- Kolom tanda selalu ada meskipun kosong
 vim.g.mapleader = " "
 vim.opt.termguicolors = true -- Wajib agar warna tidak flat
 vim.opt.number = true
@@ -16,6 +17,7 @@ vim.opt.ignorecase = true -- Search tidak sensitif huruf besar/kecil
 vim.opt.smartcase = true -- Search sensitif huruf besar jika Anda mengetik huruf besar
 vim.opt.cursorline = true -- Garis bawah pada baris kursor aktif
 vim.opt.scrolloff = 8 -- Sisakan 8 baris saat scroll agar kursor tidak di paling bawah
+
 -- ==========================================================================
 -- 2. BOOTSTRAP LAZY.NVIM (Plugin Manager)
 -- ==========================================================================
@@ -177,11 +179,46 @@ require("lazy").setup({
       
       -- Opsional: Ubah warna highlight agar sesuai dengan Tokyonight
       -- Warna 'IlluminatedWordText' biasanya agak redup di beberapa tema
-      vim.api.nvim_set_hl(0, "IlluminatedWordText", { link = "Visual" })
-      vim.api.nvim_set_hl(0, "IlluminatedWordRead", { link = "Visual" })
-      vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { link = "Visual" })
+      vim.api.nvim_set_hl(0, "IlluminatedWordText", { link = "LspReferenceText" })
+      vim.api.nvim_set_hl(0, "IlluminatedWordRead", { link = "LspReferenceRead" })
+      vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { link = "LspReferenceWrite" })
     end,
   },
+  -- INSTALL DULU LAZYGIT DI UBUNTU BRO!!!!!!
+{
+  "kdheepak/lazygit.nvim",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  keys = {
+    { "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" }
+  }
+},
+{
+  "lewis6991/gitsigns.nvim",
+  config = function()
+    require('gitsigns').setup({
+      signs = {
+        add          = { text = '▎' }, -- Simbol garis tipis untuk baris baru
+        change       = { text = '▎' }, -- Simbol garis tipis untuk baris edit
+        delete       = { text = '' }, -- Simbol panah untuk baris hapus
+        topdelete    = { text = '' },
+        changedelete = { text = '▎' },
+        untracked    = { text = '┆' },
+      },
+      signcolumn = true,  -- Menampilkan tanda di kolom kiri
+      current_line_blame = true, -- Fitur "Git Lens": muncul tulisan siapa yang edit di ujung baris
+      current_line_blame_opts = {
+        delay = 500,
+      },
+    })
+
+    -- Keymaps khusus untuk navigasi perubahan Git
+    local gs = package.loaded.gitsigns
+    vim.keymap.set('n', ']h', gs.next_hunk, { desc = "Ke perubahan berikutnya" })
+    vim.keymap.set('n', '[h', gs.prev_hunk, { desc = "Ke perubahan sebelumnya" })
+    vim.keymap.set('n', '<leader>hp', gs.preview_hunk, { desc = "Preview perubahan" })
+    vim.keymap.set('n', '<leader>hr', gs.reset_hunk, { desc = "Undo perubahan baris ini" })
+  end
+}
 })
 -- ==========================================================================
 -- TELESCOPE KEYMAPS
