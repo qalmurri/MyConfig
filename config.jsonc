@@ -46,6 +46,11 @@
 	    "keyColor": "green"
     },
     {
+	    "type": "bios",
+	    "key": "├󰘚 Bios",
+	    "keyColor": "green"
+    },
+    {
 	    "type": "memory",
 	    "key": "├󰍛 Memory",
 	    "keyColor": "green"
