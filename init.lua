@@ -1,7 +1,3 @@
--- memakai kode di bawah ini, ikuti caranya:
--- 1. setelah buka nvim dengan pengaturan configurasi ini, keluar. Lalu...
--- hapus folder instalasi plugin yang setengah jadi
--- rm -rf ~/.local/share/nvim/lazy/nvim-treesitter
 -- rm -rf ~/.local/state/nvim/lazy/
 -- lalu buka lagi nvim
 -- :TSInstall python lua 
@@ -43,6 +39,7 @@ require("lazy").setup({
       vim.cmd([[colorscheme tokyonight-night]])
     end,
   },
+
 -- [LSP] Konfigurasi Kecerdasan Bahasa
 {
   "neovim/nvim-lspconfig",
@@ -72,6 +69,7 @@ require("lazy").setup({
     })
   end,
 },
+
 -- TREESITTER: Mesin Highlighting
   {
     "nvim-treesitter/nvim-treesitter",
@@ -91,6 +89,7 @@ require("lazy").setup({
       })
     end,
   },
+
   -- ✨ Auto pairs {}, (), []
 {
   "windwp/nvim-autopairs",
@@ -101,6 +100,21 @@ require("lazy").setup({
     })
   end,
 },
+
+-- Neo-tree
+{
+"nvim-neo-tree/neo-tree.nvim",
+  branch = "v3.x",
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-tree/nvim-web-devicons", 
+    "MunifTanjim/nui.nvim",
+  },
+  config = function()
+    require("neo-tree").setup({})
+  end,	
+},
+
     -- 🔍 Telescope
   {
     "nvim-telescope/telescope.nvim",
@@ -115,6 +129,7 @@ require("lazy").setup({
   main = "ibl",
   opts = {},
 },
+
 -- [CMP] Autocomplete Menu
   {
     "hrsh7th/nvim-cmp",
@@ -159,6 +174,7 @@ require("lazy").setup({
       })
     end,
   },
+
   -- [D] Highlight simbol di bawah cursor (Smart Highlight)
   {
     "RRethy/vim-illuminate",
@@ -184,6 +200,7 @@ require("lazy").setup({
       vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { link = "LspReferenceWrite" })
     end,
   },
+
   -- INSTALL DULU LAZYGIT DI UBUNTU BRO!!!!!!
 {
   "kdheepak/lazygit.nvim",
@@ -218,8 +235,30 @@ require("lazy").setup({
     vim.keymap.set('n', '<leader>hp', gs.preview_hunk, { desc = "Preview perubahan" })
     vim.keymap.set('n', '<leader>hr', gs.reset_hunk, { desc = "Undo perubahan baris ini" })
   end
-}
+},
+
+-- untuk mengaktifkan minimap
+{
+  'echasnovski/mini.map',
+  version = false,
+  config = function()
+    local map = require('mini.map')
+    map.setup({
+      integrations = {
+        map.gen_integration.builtin_search(),
+        map.gen_integration.gitsigns(),
+        map.gen_integration.diagnostic(),
+      },
+      symbols = { scrollbar = '┃' },
+      window = { width = 15 },
+    })
+    
+    -- Shortcut untuk buka/tutup
+    vim.keymap.set('n', '<leader>mm', map.toggle, { desc = "Toggle Minimap" })
+  end,
+},
 })
+
 -- ==========================================================================
 -- TELESCOPE KEYMAPS
 -- ==========================================================================
@@ -238,6 +277,10 @@ end)
 vim.keymap.set("n", "<leader>fh", function()
   require("telescope.builtin").help_tags()
 end)
+
+-- shorcur untuk neo-tree
+vim.keymap.set('n', '<C-n>', ':Neotree toggle<CR>', { silent = true })
+
 
 -- Keymaps untuk LSP (Gunakan saat kursor berada di atas kode)
 vim.api.nvim_create_autocmd('LspAttach', {
