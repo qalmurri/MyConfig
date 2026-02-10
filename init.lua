@@ -257,6 +257,53 @@ require("lazy").setup({
     vim.keymap.set('n', '<leader>mm', map.toggle, { desc = "Toggle Minimap" })
   end,
 },
+
+-- animasi cursor
+{
+  "sphamba/smear-cursor.nvim",
+  event = "VeryLazy",
+  opts = {
+    stiffness = 0.8,       -- makin tinggi = makin cepat berhenti
+    trailing_stiffness = 0.5,
+    distance_stop_animating = 0.2,
+    hide_target_hack = true,
+    gamma = 1,
+    legacy_computing_symbols_support = false,
+  },
+},
+
+-- Discord Rich Presence
+{
+  "vyfor/cord.nvim",
+  build = ":Cord update",
+  opts = {
+    auto_start = true,
+    editor = {
+      client = "neovim",
+    },
+
+    display = {
+      show_time = true,
+      show_repository = true,
+    },
+
+    text = {
+      default = "Using Neovim",
+      viewing = "Viewing a file",
+      editing = "Editing a file",
+      file_browser = "Browsing files",
+      workspace = "In workspace",
+      terminal = "Running commands"
+    },
+
+    buttons = {
+      {
+        label = "View Profile",
+        url = "https://github.com/qalmurri/",
+      },
+    },
+  },
+}
 })
 
 -- ==========================================================================
